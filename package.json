@@ -1,0 +1,29 @@
+{
+  "name": "apply-agent",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "AI 网申表单填写 Agent（Chrome 扩展，自带 API Key 版，无后端）",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "motion": "^13.5.0",
+    "pdfjs-dist": "^5.4.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

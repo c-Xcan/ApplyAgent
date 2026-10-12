@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "新新闪投",
+  "version": "0.1.0",
+  "description": "AI Agent：实时读懂任意网申表单，用你的资料自动填写。",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "unlimitedStorage", "sidePanel", "tabs", "scripting", "webNavigation", "debugger", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "打开新新闪投", "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" } },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle",
+      "js": ["content.js"]
+    }
+  ]
+}
