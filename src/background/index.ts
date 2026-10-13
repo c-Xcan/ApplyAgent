@@ -31,6 +31,15 @@ function stopRun(tabId: number, why: string) {
 const runs = new Map<number, RunState>()
 const ports = new Set<chrome.runtime.Port>()
 
+// 等模型回复时 fetch 超过 30 秒没有响应，Chrome 会直接回收 service worker（内存里的运行状态随之丢失）；
+// 有任务在跑时定时调一次扩展接口，重置这个计时器
+let busy = 0
+let beat: ReturnType<typeof setInterval> | undefined
+function keepAlive<T>(p: Promise<T>): Promise<T> {
+  if (busy++ === 0) beat = setInterval(() => { chrome.runtime.getPlatformInfo().catch(() => {}) }, 20_000)
+  return p.finally(() => { if (--busy === 0) clearInterval(beat) })
+}
+
 function broadcast(tabId: number, event: RunEvent) {
   const st = runs.get(tabId)
   if (st) {
@@ -78,7 +87,7 @@ async function startRun(tabId: number) {
   }
   const models = modelConfigs(settings)
   let qid = 0
-  runAgent({
+  keepAlive(runAgent({
     tabId,
     archiveId,
     settings,
@@ -105,7 +114,7 @@ async function startRun(tabId: number) {
         st.abort.signal.addEventListener('abort', () => resolve([]))
       }),
     saveSite: (m) => { store.saveSite(m).catch(() => {}) },
-  }).finally(() => {
+  })).finally(() => {
     if (st.running) {
       st.running = false
     }
@@ -149,17 +158,17 @@ chrome.runtime.onMessage.addListener((msg: any, sender, reply) => {
         return highlight(msg.tabId, msg.ref)
       case 'llm.test': {
         // 设置页「测试连接」：用表单里还没保存的配置发一个最小请求
-        const r = await chat(msg.config as ModelConfig, [{ role: 'user', content: '请只回复：OK' }], { maxTokens: 16, temperature: 0, tag: 'test' })
+        const r = await keepAlive(chat(msg.config as ModelConfig, [{ role: 'user', content: '请只回复：OK' }], { maxTokens: 16, temperature: 0, tag: 'test' }))
         return { ok: true, text: r.text.trim().slice(0, 100) }
       }
       case 'resume.parse': {
         const s = await store.settings()
         if (!modelReady(s)) throw new Error('还没有配置模型：请先在「设置 → 模型」里填写接口地址、API Key 和模型名')
         const { planner } = modelConfigs(s)
-        const json = await chatJson<Record<string, unknown>>(planner, [
+        const json = await keepAlive(chatJson<Record<string, unknown>>(planner, [
           { role: 'system', content: RESUME_SYSTEM },
           { role: 'user', content: String(msg.text).slice(0, 20000) },
-        ], { maxTokens: 6000 })
+        ], { maxTokens: 6000 }))
         return { ok: true, profile: json }
       }
     }

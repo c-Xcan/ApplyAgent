@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../shared/icons'
 import type { ConfirmDecision, FieldOutcome, RunEvent } from '../shared/types'
 import { IconButton, copyText, toast } from '../shared/ui'
@@ -26,6 +26,8 @@ const copyable = (o: FieldOutcome) => o.status === 'failed' && o.op !== 'upload'
 export function FillTab({ tabId }: { tabId: number | null }) {
   const [events, setEvents] = useState<RunEvent[]>([])
   const [running, setRunning] = useState(false)
+  const runningRef = useRef(false)
+  runningRef.current = running
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [drafts, setDrafts] = useState<Record<string, { use: boolean; value: string }>>({})
 
@@ -48,11 +50,20 @@ export function FillTab({ tabId }: { tabId: number | null }) {
       })
       if (m.event.kind === 'done') setRunning(false)
     }
+    // 重连后后台可能已经是新的 service worker，之前的运行连同状态都没了：不再等它的事件
+    const resync = () => {
+      if (closed) return
+      chrome.runtime.sendMessage({ t: 'run.state', tabId }).then((r) => {
+        if (closed || r?.running || !runningRef.current) return
+        setRunning(false)
+        setEvents((ev) => [...ev, { kind: 'log', level: 'error', text: '后台被浏览器中断了，这次填写没有完成，请重新点「开始填写当前页面」' }])
+      }, () => {})
+    }
     const connect = () => {
       if (closed) return
       port = chrome.runtime.connect({ name: 'panel' })
       port.onMessage.addListener(onMsg)
-      port.onDisconnect.addListener(() => setTimeout(connect, 500))
+      port.onDisconnect.addListener(() => setTimeout(() => { connect(); resync() }, 500))
     }
     connect()
     return () => {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "新新闪投",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI Agent：实时读懂任意网申表单，用你的资料自动填写。",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "unlimitedStorage", "sidePanel", "tabs", "scripting", "webNavigation", "debugger", "activeTab"],
